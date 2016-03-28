@@ -433,11 +433,12 @@ liferea_webkit_new (LifereaHtmlView *htmlview)
 	view = WEBKIT_WEB_VIEW (liferea_web_view_new ());
 	webkit_web_view_set_settings (view, liferea_webkit_impl->settings);
 
-	g_signal_connect (
+	g_signal_connect_object (
 		liferea_webkit_impl,
 		"page-created",
 		G_CALLBACK (on_page_created),
-		view);
+		view,
+		G_CONNECT_AFTER);
 
 	/** Pass LifereaHtmlView into the WebKitWebView object */
 	g_object_set_data (
