@@ -484,15 +484,6 @@ liferea_webkit_change_zoom_level (GtkWidget *webview, gfloat zoom_level)
 }
 
 /**
- * Return whether text is selected
- */
-static gboolean
-liferea_webkit_has_selection (GtkWidget *webview)
-{
-	return TRUE;
-}
-
-/**
  * Copy selected text to the clipboard
  */
 static void
@@ -514,11 +505,10 @@ liferea_webkit_get_zoom_level (GtkWidget *webview)
  * Scroll page down (via shortcut key)
  *
  */
-static gboolean
+static void
 liferea_webkit_scroll_pagedown (GtkWidget *webview)
 {
 	liferea_web_view_scroll_pagedown (LIFEREA_WEB_VIEW (webview));
-	return TRUE;
 }
 
 static void
@@ -540,10 +530,10 @@ htmlviewImpl webkitImpl = {
 	.launch		= liferea_webkit_launch_url,
 	.zoomLevelGet	= liferea_webkit_get_zoom_level,
 	.zoomLevelSet	= liferea_webkit_change_zoom_level,
-	.hasSelection	= liferea_webkit_has_selection,  /* Was only useful for the context menu, can be removed */
+	.hasSelection	= NULL,  /* Was only useful for the context menu, can be removed */
 	.copySelection	= liferea_webkit_copy_selection, /* Same. */
-	.scrollPagedown	= liferea_webkit_scroll_pagedown, /* Doesn't need to return gboolean */
-	.setProxy	= liferea_webkit_set_proxy,
+	.scrollPagedown	= liferea_webkit_scroll_pagedown,
+	.setProxy	= NULL,
 	.setOffLine	= NULL // FIXME: blocked on https://bugs.webkit.org/show_bug.cgi?id=18893
 };
 
