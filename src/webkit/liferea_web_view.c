@@ -701,6 +701,9 @@ liferea_web_view_scroll_pagedown (LifereaWebView *self)
 void
 liferea_web_view_set_dbus_connection (LifereaWebView *self, GDBusConnection *connection)
 {
+	if (self->dbus_connection) {
+		g_object_remove_weak_pointer (G_OBJECT (self->dbus_connection), (gpointer *) &self->dbus_connection);
+	}
 	self->dbus_connection = connection;
 	g_object_add_weak_pointer (G_OBJECT (self->dbus_connection), (gpointer *) &self->dbus_connection);
 }
