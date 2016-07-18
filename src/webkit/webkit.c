@@ -27,6 +27,7 @@
 #include "browser.h"
 #include "conf.h"
 #include "common.h"
+#include "enclosure.h" /* Only for enclosure_download */
 #include "ui/browser_tabs.h"
 #include "ui/liferea_htmlview.h"
 
@@ -314,6 +315,16 @@ liferea_webkit_initialize_web_extensions (WebKitWebContext 	*context,
 }
 
 static void
+liferea_webkit_impl_download_started (WebKitWebContext	*context,
+				      WebKitDownload 	*download,
+				      gpointer 		user_data)
+{
+	WebKitURIRequest *request = webkit_download_get_request (download);
+	webkit_download_cancel (download);
+	enclosure_download (NULL, webkit_uri_request_get_uri (request), TRUE);
+}
+
+static void
 liferea_webkit_impl_init (LifereaWebKitImpl *self)
 {
 	gboolean	disable_javascript, enable_plugins;
@@ -377,6 +388,12 @@ liferea_webkit_impl_init (LifereaWebKitImpl *self)
 		webkit_web_context_get_default (),
 		"initialize-web-extensions",
 		G_CALLBACK (liferea_webkit_initialize_web_extensions),
+		self);
+
+	g_signal_connect (
+		webkit_web_context_get_default (),
+		"download-started",
+		G_CALLBACK (liferea_webkit_impl_download_started),
 		self);
 }
 
