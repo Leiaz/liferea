@@ -529,6 +529,18 @@ liferea_web_view_new_window_requested (	WebKitWebView *view,
 	return TRUE;
 }
 
+static gboolean
+liferea_web_view_response_decision_requested (WebKitWebView *view,
+                                              WebKitPolicyDecision *decision)
+{
+	g_return_val_if_fail (WEBKIT_IS_RESPONSE_POLICY_DECISION (decision), FALSE);
+
+	if (!webkit_response_policy_decision_is_mime_type_supported (WEBKIT_RESPONSE_POLICY_DECISION (decision))) {
+		webkit_policy_decision_download (decision);
+		return TRUE;
+	}
+	return FALSE;
+}
 
 static gboolean
 liferea_web_view_decide_policy (WebKitWebView *view,
@@ -541,8 +553,8 @@ liferea_web_view_decide_policy (WebKitWebView *view,
 			return liferea_web_view_link_clicked (view, decision);
 		case WEBKIT_POLICY_DECISION_TYPE_NEW_WINDOW_ACTION:
 			return liferea_web_view_new_window_requested(view, decision);
-
 		case WEBKIT_POLICY_DECISION_TYPE_RESPONSE:
+                        return liferea_web_view_response_decision_requested (view, decision);
 		default:
 			return FALSE;
 	}
