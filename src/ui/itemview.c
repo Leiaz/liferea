@@ -88,7 +88,7 @@ itemview_finalize (GObject *object)
 	}
 	
 	if (priv->enclosureView)
-		g_object_unref (priv->enclosureView);
+		gtk_widget_destroy (GTK_WIDGET (priv->enclosureView));
 	if (priv->itemListView)
 		g_object_unref (priv->itemListView);
 
@@ -478,7 +478,7 @@ itemview_set_layout (nodeViewType newMode)
 	
 	/* Destroy previous enclosure list. */
 	if (ivp->enclosureView) {
-		gtk_widget_destroy (enclosure_list_view_get_widget (ivp->enclosureView));
+		gtk_widget_destroy (GTK_WIDGET (ivp->enclosureView));
 		ivp->enclosureView = NULL;
 	}
 
@@ -486,7 +486,7 @@ itemview_set_layout (nodeViewType newMode)
 	if (encViewVBoxName) {
 		ivp->enclosureView = enclosure_list_view_new ();
 		gtk_grid_attach_next_to (GTK_GRID (liferea_shell_lookup (encViewVBoxName)),
-		                  enclosure_list_view_get_widget (ivp->enclosureView),
+		                  GTK_WIDGET (ivp->enclosureView),
 				  NULL, GTK_POS_BOTTOM, 1,1);
 		gtk_widget_show_all (liferea_shell_lookup (encViewVBoxName));
 	}

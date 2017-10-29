@@ -34,22 +34,8 @@ G_BEGIN_DECLS
 #define IS_ENCLOSURE_LIST_VIEW(obj)		(G_TYPE_CHECK_INSTANCE_TYPE ((obj), ENCLOSURE_LIST_VIEW_TYPE))
 #define IS_ENCLOSURE_LIST_VIEW_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE ((klass), ENCLOSURE_LIST_VIEW_TYPE))
 
-typedef struct EnclosureListView		EnclosureListView;
-typedef struct EnclosureListViewClass	EnclosureListViewClass;
-typedef struct EnclosureListViewPrivate	EnclosureListViewPrivate;
-
-struct EnclosureListView
-{
-	GObject		parent;
-	
-	/*< private >*/
-	EnclosureListViewPrivate	*priv;
-};
-
-struct EnclosureListViewClass 
-{
-	GObjectClass parent_class;
-};
+typedef struct _EnclosureListView	EnclosureListView;
+typedef struct _EnclosureListViewClass	EnclosureListViewClass;
 
 GType enclosure_list_view_get_type	(void);
 
@@ -59,16 +45,6 @@ GType enclosure_list_view_get_type	(void);
  * @returns a new enclosure list view
  */
 EnclosureListView * enclosure_list_view_new (void);
-
-/**
- * Returns the rendering widget for a HTML view. Only
- * to be used by ui_mainwindow.c for widget reparenting.
- *
- * @param elv	the enclosure list view
- *
- * @returns the rendering widget
- */
-GtkWidget * enclosure_list_view_get_widget (EnclosureListView *elv);
 
 /**
  * Loads the enclosure list of the given item into the

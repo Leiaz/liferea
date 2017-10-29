@@ -45,31 +45,25 @@ enum {
 	ES_LEN
 };
 
-#define ENCLOSURE_LIST_VIEW_GET_PRIVATE(object)(G_TYPE_INSTANCE_GET_PRIVATE ((object), ENCLOSURE_LIST_VIEW_TYPE, EnclosureListViewPrivate))
-
-struct EnclosureListViewPrivate {
+struct _EnclosureListView {
+	GtkBox	 	parent;
 	GSList		*enclosures;		/**< list of currently presented enclosures */
 
-	GtkWidget	*container;		/**< container the list is embedded in */
 	GtkWidget	*expander;		/**< expander that shows/hides the list */
 	GtkWidget	*treeview;
 	GtkTreeStore	*treestore;
 };
 
-static GObjectClass *parent_class = NULL;
+struct _EnclosureListViewClass {
+	GtkBoxClass 	parent_class;
+};
 
-G_DEFINE_TYPE (EnclosureListView, enclosure_list_view, G_TYPE_OBJECT);
+G_DEFINE_TYPE (EnclosureListView, enclosure_list_view, GTK_TYPE_BOX);
 
 static void
 enclosure_list_view_finalize (GObject *object)
 {
-	G_OBJECT_CLASS (parent_class)->finalize (object);
-}
-
-static void
-enclosure_list_view_destroy_cb (GtkWidget *widget, EnclosureListView *elv)
-{
-	g_object_unref (elv);
+	G_OBJECT_CLASS (enclosure_list_view_parent_class)->finalize (object);
 }
 
 static void
@@ -77,17 +71,12 @@ enclosure_list_view_class_init (EnclosureListViewClass *klass)
 {
 	GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
-	parent_class = g_type_class_peek_parent (klass);
-
 	object_class->finalize = enclosure_list_view_finalize;
-
-	g_type_class_add_private (object_class, sizeof(EnclosureListViewPrivate));
 }
 
 static void
 enclosure_list_view_init (EnclosureListView *elv)
 {
-	elv->priv = ENCLOSURE_LIST_VIEW_GET_PRIVATE (elv);
 }
 
 static enclosurePtr
@@ -96,7 +85,7 @@ enclosure_list_view_get_selected_enclosure (EnclosureListView *elv, GtkTreeIter 
 	gchar		*str;
 	enclosurePtr	enclosure;	
 
-	gtk_tree_model_get (GTK_TREE_MODEL (elv->priv->treestore), iter, ES_SERIALIZED, &str, -1);
+	gtk_tree_model_get (GTK_TREE_MODEL (elv->treestore), iter, ES_SERIALIZED, &str, -1);
 	enclosure = enclosure_from_string (str);
 	g_free (str);
 
@@ -121,7 +110,7 @@ on_enclosure_list_button_press (GtkWidget *treeview, GdkEventButton *event, gpoi
 	if (!gtk_tree_view_get_path_at_pos (GTK_TREE_VIEW (treeview), (gint)event->x, (gint)event->y, &path, NULL, NULL, NULL))
 		return FALSE;
 
-	if (gtk_tree_model_get_iter (GTK_TREE_MODEL (elv->priv->treestore), &iter, path))
+	if (gtk_tree_model_get_iter (GTK_TREE_MODEL (elv->treestore), &iter, path))
 		ui_popup_enclosure_menu (enclosure_list_view_get_selected_enclosure (elv, &iter), eb->button, eb->time);
 	
 	return TRUE;
@@ -166,14 +155,16 @@ enclosure_list_view_new ()
 	GtkTreeViewColumn 	*column;
 	GtkWidget		*widget;
 		
-	elv = ENCLOSURE_LIST_VIEW (g_object_new (ENCLOSURE_LIST_VIEW_TYPE, NULL));
+	elv = ENCLOSURE_LIST_VIEW (g_object_new (ENCLOSURE_LIST_VIEW_TYPE,
+		"orientation", GTK_ORIENTATION_VERTICAL,
+		"spacing", 0,
+		"hexpand", TRUE,
+		NULL));
 
-	/* Use a vbox to allow media player insertion */
-	elv->priv->container = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
-	gtk_widget_set_name (GTK_WIDGET (elv->priv->container), "enclosureview");
+	gtk_widget_set_name (GTK_WIDGET (elv), "enclosureview");
 
-	elv->priv->expander = gtk_expander_new (_("Attachments"));
-	gtk_box_pack_end (GTK_BOX (elv->priv->container), elv->priv->expander, TRUE, TRUE, 0);
+	elv->expander = gtk_expander_new (_("Attachments"));
+	gtk_box_pack_end (GTK_BOX (elv), elv->expander, TRUE, TRUE, 0);
 	
 	widget = gtk_scrolled_window_new (NULL, NULL);
 	/* FIXME: Setting a fixed size is not nice, but a workaround for the
@@ -181,13 +172,13 @@ enclosure_list_view_new ()
 	gtk_widget_set_size_request (widget, -1, 75);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (widget), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 	gtk_scrolled_window_set_shadow_type (GTK_SCROLLED_WINDOW (widget), GTK_SHADOW_IN);
-	gtk_container_add (GTK_CONTAINER (elv->priv->expander), widget);
+	gtk_container_add (GTK_CONTAINER (elv->expander), widget);
 
-	elv->priv->treeview = gtk_tree_view_new ();
-	gtk_container_add (GTK_CONTAINER (widget), elv->priv->treeview);
-	gtk_widget_show (elv->priv->treeview);
+	elv->treeview = gtk_tree_view_new ();
+	gtk_container_add (GTK_CONTAINER (widget), elv->treeview);
+	gtk_widget_show (elv->treeview);
 	
-	elv->priv->treestore = gtk_tree_store_new (ES_LEN,
+	elv->treestore = gtk_tree_store_new (ES_LEN,
 	                                           G_TYPE_STRING,	/* ES_NAME_STR */
 						   G_TYPE_STRING,	/* ES_MIME_STR */
 						   G_TYPE_BOOLEAN,	/* ES_DOWNLOADED */
@@ -195,7 +186,7 @@ enclosure_list_view_new ()
 						   G_TYPE_STRING,	/* ES_SIZE_STRING */
 						   G_TYPE_STRING	/* ES_SERIALIZED */
 	                                           );
-	gtk_tree_view_set_model (GTK_TREE_VIEW (elv->priv->treeview), GTK_TREE_MODEL(elv->priv->treestore));
+	gtk_tree_view_set_model (GTK_TREE_VIEW (elv->treeview), GTK_TREE_MODEL(elv->treestore));
 
 	/* explicitely no translation for invisible column headers... */
 	
@@ -203,13 +194,13 @@ enclosure_list_view_new ()
 	column = gtk_tree_view_column_new_with_attributes ("Size", renderer, 
 	                                                   "text", ES_SIZE_STR,
 							   NULL);
-	gtk_tree_view_append_column (GTK_TREE_VIEW (elv->priv->treeview), column);
+	gtk_tree_view_append_column (GTK_TREE_VIEW (elv->treeview), column);
 		
 	renderer = gtk_cell_renderer_text_new ();
 	column = gtk_tree_view_column_new_with_attributes ("URL", renderer, 
 	                                                   "text", ES_NAME_STR,
 							   NULL);
-	gtk_tree_view_append_column (GTK_TREE_VIEW (elv->priv->treeview), column);
+	gtk_tree_view_append_column (GTK_TREE_VIEW (elv->treeview), column);
 	gtk_tree_view_column_set_sort_column_id (column, ES_NAME_STR);
 	gtk_tree_view_column_set_expand (column, TRUE);
 	g_object_set (renderer, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
@@ -218,23 +209,15 @@ enclosure_list_view_new ()
 	column = gtk_tree_view_column_new_with_attributes ("MIME", renderer, 
 	                                                   "text", ES_MIME_STR,
 							   NULL);
-	gtk_tree_view_append_column (GTK_TREE_VIEW (elv->priv->treeview), column);
+	gtk_tree_view_append_column (GTK_TREE_VIEW (elv->treeview), column);
 	
-	gtk_tree_view_set_headers_visible (GTK_TREE_VIEW (elv->priv->treeview), FALSE);
+	gtk_tree_view_set_headers_visible (GTK_TREE_VIEW (elv->treeview), FALSE);
 
-	g_signal_connect (G_OBJECT (elv->priv->treeview), "button_press_event", G_CALLBACK (on_enclosure_list_button_press), (gpointer)elv);
-	g_signal_connect (G_OBJECT (elv->priv->treeview), "row-activated", G_CALLBACK (on_enclosure_list_activate), (gpointer)elv);
-	g_signal_connect (G_OBJECT (elv->priv->treeview), "popup_menu", G_CALLBACK (on_enclosure_list_popup_menu), (gpointer)elv);
-
-	g_signal_connect_object (elv->priv->container, "destroy", G_CALLBACK (enclosure_list_view_destroy_cb), elv, 0);
+	g_signal_connect (G_OBJECT (elv->treeview), "button_press_event", G_CALLBACK (on_enclosure_list_button_press), (gpointer)elv);
+	g_signal_connect (G_OBJECT (elv->treeview), "row-activated", G_CALLBACK (on_enclosure_list_activate), (gpointer)elv);
+	g_signal_connect (G_OBJECT (elv->treeview), "popup_menu", G_CALLBACK (on_enclosure_list_popup_menu), (gpointer)elv);
 
 	return elv;
-}
-
-GtkWidget *
-enclosure_list_view_get_widget (EnclosureListView *elv)
-{
-	return elv->priv->container;
 }
 
 void
@@ -249,14 +232,14 @@ enclosure_list_view_load (EnclosureListView *elv, itemPtr item)
 		return;
 
 	/* cleanup old content */
-	gtk_tree_store_clear (elv->priv->treestore);
-	list = elv->priv->enclosures;
+	gtk_tree_store_clear (elv->treestore);
+	list = elv->enclosures;
 	while (list) {
 		enclosure_free ((enclosurePtr)list->data);
 		list = g_slist_next (list);
 	}
-	g_slist_free (elv->priv->enclosures);
-	elv->priv->enclosures = NULL;	
+	g_slist_free (elv->enclosures);
+	elv->enclosures = NULL;
 	
 	/* load list into tree view */
 	filteredList = NULL;
@@ -288,8 +271,8 @@ enclosure_list_view_load (EnclosureListView *elv, itemPtr item)
 			else
 				sizeStr = g_strdup ("");
 
-			gtk_tree_store_append (elv->priv->treestore, &iter, NULL);
-			gtk_tree_store_set (elv->priv->treestore, &iter,
+			gtk_tree_store_append (elv->treestore, &iter, NULL);
+			gtk_tree_store_set (elv->treestore, &iter,
 				            ES_NAME_STR, enclosure->url,
 					    ES_MIME_STR, enclosure->mime?enclosure->mime:"",
 				            ES_DOWNLOADED, enclosure->downloaded,
@@ -299,7 +282,7 @@ enclosure_list_view_load (EnclosureListView *elv, itemPtr item)
 					    -1);
 			g_free (sizeStr);
 
-			elv->priv->enclosures = g_slist_append (elv->priv->enclosures, enclosure);
+			elv->enclosures = g_slist_append (elv->enclosures, enclosure);
 
 			// Filter unwanted MIME types (we only want audio/* and video/*)
 			if (enclosure->mime &&
@@ -313,22 +296,22 @@ enclosure_list_view_load (EnclosureListView *elv, itemPtr item)
 	}
 
 	/* decide visibility of the list */
-	len = g_slist_length (elv->priv->enclosures);
+	len = g_slist_length (elv->enclosures);
 	if (len == 0) {
 		enclosure_list_view_hide (elv);
 		return;
 	}	
 	
-	gtk_widget_show_all (elv->priv->container);
+	gtk_widget_show_all (GTK_WIDGET (elv));
 
 	/* update list title */
 	gchar *text = g_strdup_printf (ngettext("%d attachment", "%d attachments", len), len);
-	gtk_expander_set_label (GTK_EXPANDER (elv->priv->expander), text);
+	gtk_expander_set_label (GTK_EXPANDER (elv->expander), text);
 	g_free (text);
 
 	/* Load the optional media player plugin */
 	if (g_slist_length (filteredList) > 0) {
-		liferea_media_player_load (elv->priv->container, filteredList);
+		liferea_media_player_load (GTK_WIDGET(elv), filteredList);
 	}
 }
 
@@ -337,10 +320,10 @@ enclosure_list_view_select (EnclosureListView *elv, guint position)
 {
 	GtkTreeIter iter;
 
-	if (!gtk_tree_model_iter_nth_child (GTK_TREE_MODEL (elv->priv->treestore), &iter, NULL, position))
+	if (!gtk_tree_model_iter_nth_child (GTK_TREE_MODEL (elv->treestore), &iter, NULL, position))
 		return;
 
-	gtk_tree_selection_select_iter (gtk_tree_view_get_selection (GTK_TREE_VIEW (elv->priv->treeview)), &iter);
+	gtk_tree_selection_select_iter (gtk_tree_view_get_selection (GTK_TREE_VIEW (elv->treeview)), &iter);
 }
 
 void
@@ -349,7 +332,7 @@ enclosure_list_view_hide (EnclosureListView *elv)
 	if (!elv)
 		return;
 	
-	gtk_widget_hide (GTK_WIDGET (elv->priv->container));
+	gtk_widget_hide (GTK_WIDGET (elv));
 }
 
 /* callback for preferences and enclosure type handling */
