@@ -33,7 +33,12 @@ G_DEFINE_INTERFACE (LifereaMediaPlayerActivatable, liferea_media_player_activata
 void
 liferea_media_player_activatable_default_init (LifereaMediaPlayerActivatableInterface *iface)
 {
-	/* No properties yet */
+	g_object_interface_install_property (iface,
+		g_param_spec_object ("plugins-box",
+			"Plugins box",
+			"A GtkBox where plugins can add their widget",
+			GTK_TYPE_BOX,
+			G_PARAM_READWRITE|G_PARAM_CONSTRUCT_ONLY));
 }
 
 void
@@ -62,7 +67,7 @@ liferea_media_player_activatable_deactivate (LifereaMediaPlayerActivatable * act
 
 void
 liferea_media_player_activatable_load (LifereaMediaPlayerActivatable * activatable,
-                               GtkWidget *parentWidget, GSList *enclosures)
+                               GSList *enclosures)
 {
 	LifereaMediaPlayerActivatableInterface *iface;
 
@@ -70,7 +75,7 @@ liferea_media_player_activatable_load (LifereaMediaPlayerActivatable * activatab
 
 	iface = LIFEREA_MEDIA_PLAYER_ACTIVATABLE_GET_IFACE (activatable);
 	if (iface->load)
-		iface->load (activatable, parentWidget, enclosures);
+		iface->load (activatable, enclosures);
 }
 
 

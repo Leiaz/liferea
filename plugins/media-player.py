@@ -43,7 +43,7 @@ PlayState = enum("PLAY", "PAUSE", "STOP")
 class MediaPlayerPlugin(GObject.Object, Liferea.MediaPlayerActivatable):
     __gtype_name__ = 'MediaPlayerPlugin'
 
-    object = GObject.property(type=GObject.Object)
+    plugins_box = GObject.property (type=Gtk.Box)
 
     def __init__(self):
         Gst.init_check(None)
@@ -62,6 +62,8 @@ class MediaPlayerPlugin(GObject.Object, Liferea.MediaPlayerActivatable):
         self.player.connect("about-to-finish",  self.on_finished)
 
         self.moving_slider = False
+
+        self.player_widget = None
 
     def on_error(self, bus, message):
         self.playing = PlayState.STOP
@@ -194,19 +196,27 @@ class MediaPlayerPlugin(GObject.Object, Liferea.MediaPlayerActivatable):
                                     self.move_to_nanosecs)
 
 
-    def do_load(self, parentWidget, enclosures):
-        if parentWidget == None:
-           print("ERROR: Could not find media player insertion widget!")
+    def do_load(self, enclosures):
+        self.enclosures = []
 
-        # Test whether Media Player widget already exists
-        childList = Gtk.Container.get_children(parentWidget)
+        # Filter the enclosures we want
+        for e in enclosures:
+            mime = Liferea.enclosure_get_mime (e)
+            if mime and (mime.startswith ("video/") or mime.startswith ("audio/")):
+                self.enclosures.append (e)
 
-        if len(childList) == 1:
+        # If there is no supported media enclosure, hide widget
+        if not self.enclosures:
+            if self.player_widget:
+                Gtk.Widget.hide (self.player_widget)
+            return
+
+        if not self.player_widget:
            # We need to add a media player...
            vbox = Gtk.Box(Gtk.Orientation.HORIZONTAL, 0)
            vbox.props.margin = GMARGIN
            vbox.props.spacing = GMARGIN
-           Gtk.Box.pack_start(parentWidget, vbox, True, True, 0);
+           Gtk.Box.pack_start(self.plugins_box, vbox, True, True, 0);
 
            image = Gtk.Image()
            image.set_from_icon_name("media-skip-backward", Gtk.IconSize.BUTTON)
@@ -246,8 +256,8 @@ class MediaPlayerPlugin(GObject.Object, Liferea.MediaPlayerActivatable):
            Gtk.Box.pack_start(vbox, self.label, False, False, 0)
 
            Gtk.Widget.show_all(vbox)
+           self.player_widget = vbox
 
-        self.enclosures = enclosures
         self.pos = 0
         self.player.set_state(Gst.State.NULL)   # FIXME: Make this configurable?
         self.on_finished(self.player)
@@ -256,4 +266,6 @@ class MediaPlayerPlugin(GObject.Object, Liferea.MediaPlayerActivatable):
         #print("=== MediaPlayer activate")
 
     def do_deactivate(self):
-        window = self.object
+        if self.player_widget:
+            Gtk.Container.remove (self.plugins_box, self.player_widget)
+            self.player_widget = None

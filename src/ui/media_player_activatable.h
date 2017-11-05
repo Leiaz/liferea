@@ -41,7 +41,7 @@ struct _LifereaMediaPlayerActivatableInterface
 
 	void (*activate) (LifereaMediaPlayerActivatable * activatable);
 	void (*deactivate) (LifereaMediaPlayerActivatable * activatable);
-	void (*load) (LifereaMediaPlayerActivatable * activatable, GtkWidget *parentWidget, GSList *enclosures);
+	void (*load) (LifereaMediaPlayerActivatable * activatable, GSList *enclosures);
 };
 
 GType liferea_media_player_activatable_get_type (void) G_GNUC_CONST;
@@ -52,13 +52,12 @@ void liferea_media_player_activatable_deactivate (LifereaMediaPlayerActivatable 
 
 /**
  * liferea_media_player_activatable_load:
- * @parentWidget:			the parent widget for the media player
  * @enclosures: (element-type gchar*):	a list of enclosures
  *
  * Triggers the creation of a suitable media player and loads a list of
  * enclosures into it.
  */
-void liferea_media_player_activatable_load (LifereaMediaPlayerActivatable *activatable, GtkWidget *parentWidget, GSList *enclosures);
+void liferea_media_player_activatable_load (LifereaMediaPlayerActivatable *activatable, GSList *enclosures);
 
 G_END_DECLS
 

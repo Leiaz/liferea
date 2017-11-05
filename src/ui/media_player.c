@@ -24,26 +24,71 @@
 
 #include <libpeas/peas-activatable.h>
 
-// FIXME: This should be a member of some object!
-static PeasExtensionSet *extensions = NULL;
+struct _LifereaMediaPlayer {
+	GtkBox 			parent;
+	PeasExtensionSet 	*extensions;
+	GSList 			*enclosures;
+};
 
-static PeasExtensionSet *
-liferea_media_player_get_extension_set (void)
+struct _LifereaMediaPlayerClass {
+	GtkBoxClass parent_class;
+};
+
+G_DEFINE_TYPE (LifereaMediaPlayer, liferea_media_player, GTK_TYPE_BOX)
+
+static void
+liferea_media_player_dispose(GObject *gobject)
 {
-	if (!extensions) {
-		extensions = peas_extension_set_new (PEAS_ENGINE (liferea_plugins_engine_get_default ()),
-		                             LIFEREA_MEDIA_PLAYER_ACTIVATABLE_TYPE, NULL);
+	LifereaMediaPlayer *self = LIFEREA_MEDIA_PLAYER(gobject);
 
-		liferea_plugins_engine_set_default_signals (extensions, NULL);
+	if (self->extensions)
+		g_clear_object (&self->extensions);
+	if (self->enclosures) {
+		g_slist_free_full (self->enclosures, g_free);
+		self->enclosures = NULL;
 	}
 
-	return extensions;
+	/* Chaining dispose from parent class. */
+	G_OBJECT_CLASS(liferea_media_player_parent_class)->dispose(gobject);
 }
 
-typedef struct mediaPlayerLoadData {
-	GtkWidget	*parentWidget;
-	GSList		*enclosures;
-} mediaPlayerLoadData;
+static void
+liferea_media_player_class_init (LifereaMediaPlayerClass *klass)
+{
+	GObjectClass *gobject_class = G_OBJECT_CLASS(klass);
+
+	gobject_class->dispose = liferea_media_player_dispose;
+}
+
+static void
+liferea_media_player_on_extension_added (PeasExtensionSet *extensions,
+					PeasPluginInfo 	*info,
+					PeasExtension 	*exten,
+					gpointer 	user_data)
+{
+	LifereaMediaPlayer *self = LIFEREA_MEDIA_PLAYER (user_data);
+	if (self->enclosures)
+		liferea_media_player_activatable_load (LIFEREA_MEDIA_PLAYER_ACTIVATABLE (exten), self->enclosures);
+}
+
+static void
+liferea_media_player_init(LifereaMediaPlayer *self)
+{
+	self->extensions = peas_extension_set_new (PEAS_ENGINE (liferea_plugins_engine_get_default ()),
+		LIFEREA_MEDIA_PLAYER_ACTIVATABLE_TYPE,
+		"plugins-box", GTK_BOX (self),
+		NULL);
+	liferea_plugins_engine_set_default_signals (self->extensions, NULL);
+	g_signal_connect (self->extensions, "extension-added", G_CALLBACK(liferea_media_player_on_extension_added), self);
+}
+
+GtkWidget *
+liferea_media_player_new(void)
+{
+	return g_object_new (LIFEREA_TYPE_MEDIA_PLAYER,
+		"orientation", GTK_ORIENTATION_VERTICAL,
+		NULL);
+}
 
 static void
 liferea_media_player_load_foreach (PeasExtensionSet *set,
@@ -51,20 +96,19 @@ liferea_media_player_load_foreach (PeasExtensionSet *set,
                                    PeasExtension *exten,
                                    gpointer user_data)
 {
-	liferea_media_player_activatable_load (LIFEREA_MEDIA_PLAYER_ACTIVATABLE (exten),
-	                                       ((mediaPlayerLoadData *)user_data)->parentWidget,
-                                               ((mediaPlayerLoadData *)user_data)->enclosures);
+	liferea_media_player_activatable_load (LIFEREA_MEDIA_PLAYER_ACTIVATABLE (exten), user_data);
 }
 
 void
-liferea_media_player_load (GtkWidget *parentWidget, GSList *enclosures)
+liferea_media_player_load (LifereaMediaPlayer *self, GSList *enclosures)
 {
-	mediaPlayerLoadData user_data;
+	if (!self->extensions)
+		return;
 
-	user_data.parentWidget = parentWidget;
-	user_data.enclosures = enclosures;
-
-	peas_extension_set_foreach (liferea_media_player_get_extension_set (),
-	                            liferea_media_player_load_foreach, &user_data);
+	if (self->enclosures) {
+		g_slist_free_full (self->enclosures, g_free);
+	}
+	self->enclosures = g_slist_copy_deep (enclosures, (GCopyFunc) g_strdup, NULL);
+	peas_extension_set_foreach (self->extensions,
+	                            liferea_media_player_load_foreach, self->enclosures);
 }
-

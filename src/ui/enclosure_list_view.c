@@ -52,6 +52,7 @@ struct _EnclosureListView {
 	GtkWidget	*expander;		/**< expander that shows/hides the list */
 	GtkWidget	*treeview;
 	GtkTreeStore	*treestore;
+	GtkWidget	*media_player;
 };
 
 struct _EnclosureListViewClass {
@@ -165,6 +166,9 @@ enclosure_list_view_new ()
 
 	elv->expander = gtk_expander_new (_("Attachments"));
 	gtk_box_pack_end (GTK_BOX (elv), elv->expander, TRUE, TRUE, 0);
+	elv->media_player = liferea_media_player_new ();
+	gtk_box_pack_start (GTK_BOX (elv), elv->media_player, TRUE, TRUE, 0);
+	gtk_widget_show (elv->media_player);
 	
 	widget = gtk_scrolled_window_new (NULL, NULL);
 	/* FIXME: Setting a fixed size is not nice, but a workaround for the
@@ -223,7 +227,7 @@ enclosure_list_view_new ()
 void
 enclosure_list_view_load (EnclosureListView *elv, itemPtr item)
 {
-	GSList		*list, *filteredList;
+	GSList		*list, *list_str;
 	guint		len;
 
 	/* Ugly workaround to prevent race on startup when item is selected
@@ -233,17 +237,12 @@ enclosure_list_view_load (EnclosureListView *elv, itemPtr item)
 
 	/* cleanup old content */
 	gtk_tree_store_clear (elv->treestore);
-	list = elv->enclosures;
-	while (list) {
-		enclosure_free ((enclosurePtr)list->data);
-		list = g_slist_next (list);
-	}
-	g_slist_free (elv->enclosures);
+	g_slist_free_full (elv->enclosures, (GDestroyNotify) enclosure_free);
 	elv->enclosures = NULL;
 	
 	/* load list into tree view */
-	filteredList = NULL;
 	list = metadata_list_get_values (item->metadata, "enclosure");
+	list_str = list;
 	while (list) {
 		enclosurePtr enclosure = enclosure_from_string (list->data);
 		if (enclosure) {
@@ -283,17 +282,13 @@ enclosure_list_view_load (EnclosureListView *elv, itemPtr item)
 			g_free (sizeStr);
 
 			elv->enclosures = g_slist_append (elv->enclosures, enclosure);
-
-			// Filter unwanted MIME types (we only want audio/* and video/*)
-			if (enclosure->mime &&
-                            (g_str_has_prefix (enclosure->mime, "video/") ||
-			    (g_str_has_prefix (enclosure->mime, "audio/")))) {
-				filteredList = g_slist_append (filteredList, list->data);
-			}
 		}
 		
 		list = g_slist_next (list);
 	}
+
+	/* Load the optional media player plugin */
+	liferea_media_player_load (LIFEREA_MEDIA_PLAYER(elv->media_player), list_str);
 
 	/* decide visibility of the list */
 	len = g_slist_length (elv->enclosures);
@@ -302,17 +297,12 @@ enclosure_list_view_load (EnclosureListView *elv, itemPtr item)
 		return;
 	}	
 	
-	gtk_widget_show_all (GTK_WIDGET (elv));
+	gtk_widget_show (GTK_WIDGET (elv));
 
 	/* update list title */
 	gchar *text = g_strdup_printf (ngettext("%d attachment", "%d attachments", len), len);
 	gtk_expander_set_label (GTK_EXPANDER (elv->expander), text);
 	g_free (text);
-
-	/* Load the optional media player plugin */
-	if (g_slist_length (filteredList) > 0) {
-		liferea_media_player_load (GTK_WIDGET(elv), filteredList);
-	}
 }
 
 void

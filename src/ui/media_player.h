@@ -24,14 +24,28 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
+#define LIFEREA_TYPE_MEDIA_PLAYER (liferea_media_player_get_type ())
+
+#define LIFEREA_MEDIA_PLAYER(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), LIFEREA_TYPE_MEDIA_PLAYER, LifereaMediaPlayer))
+#define IS_LIFEREA_MEDIA_PLAYER(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), LIFEREA_TYPE_MEDIA_PLAYER))
+#define LIFEREA_MEDIA_PLAYER_CLASS(klass) (G_TYPE_CHECK_CLASS_CAST ((klass), LIFEREA_TYPE_MEDIA_PLAYER, LifereaMediaPlayerClass))
+#define IS_LIFEREA_MEDIA_PLAYER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), LIFEREA_TYPE_MEDIA_PLAYER))
+#define LIFEREA_MEDIA_PLAYER_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), LIFEREA_TYPE_MEDIA_PLAYER, LifereaMediaPlayerClass))
+
+typedef struct _LifereaMediaPlayer LifereaMediaPlayer;
+typedef struct _LifereaMediaPlayerClass LifereaMediaPlayerClass;
+
+GType liferea_media_player_get_type (void);
+
+GtkWidget* liferea_media_player_new (void);
+
 /**
  * liferea_media_player_load:
- * @parentWidget:        the parent widget for the media player
+ * @self: a LifereaMediaPlayer widget
  * @enclosures: (element-type gchar*): a list of enclosure strings
  *
- * Triggers the creation of a suitable media player and loads a list of
- * enclosures into it.
+ * Loads a list of enclosures into all enabled LifereaMediaPlayerActivatable extensions.
  */
-void liferea_media_player_load (GtkWidget *parentWidget, GSList *enclosures);
+void liferea_media_player_load (LifereaMediaPlayer *self, GSList *enclosures);
 
 #endif
