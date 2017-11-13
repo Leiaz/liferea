@@ -78,4 +78,15 @@ liferea_media_player_activatable_load (LifereaMediaPlayerActivatable * activatab
 		iface->load (activatable, enclosures);
 }
 
+void
+liferea_media_player_activatable_on_leaving_item (LifereaMediaPlayerActivatable * activatable)
+{
+	LifereaMediaPlayerActivatableInterface *iface;
+
+	g_return_if_fail (IS_LIFEREA_MEDIA_PLAYER_ACTIVATABLE (activatable));
+
+	iface = LIFEREA_MEDIA_PLAYER_ACTIVATABLE_GET_IFACE (activatable);
+	if (iface->on_leaving_item)
+		iface->on_leaving_item (activatable);
+}
 

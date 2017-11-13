@@ -29,7 +29,6 @@
 #include "item.h"
 #include "metadata.h"
 #include "ui/liferea_dialog.h"
-#include "ui/media_player.h"
 #include "ui/popup_menu.h"
 #include "ui/ui_common.h"
 
@@ -52,7 +51,6 @@ struct _EnclosureListView {
 	GtkWidget	*expander;		/**< expander that shows/hides the list */
 	GtkWidget	*treeview;
 	GtkTreeStore	*treestore;
-	GtkWidget	*media_player;
 };
 
 struct _EnclosureListViewClass {
@@ -166,9 +164,6 @@ enclosure_list_view_new ()
 
 	elv->expander = gtk_expander_new (_("Attachments"));
 	gtk_box_pack_end (GTK_BOX (elv), elv->expander, TRUE, TRUE, 0);
-	elv->media_player = liferea_media_player_new ();
-	gtk_box_pack_start (GTK_BOX (elv), elv->media_player, TRUE, TRUE, 0);
-	gtk_widget_show (elv->media_player);
 	
 	widget = gtk_scrolled_window_new (NULL, NULL);
 	/* FIXME: Setting a fixed size is not nice, but a workaround for the
@@ -227,7 +222,7 @@ enclosure_list_view_new ()
 void
 enclosure_list_view_load (EnclosureListView *elv, itemPtr item)
 {
-	GSList		*list, *list_str;
+	GSList		*list;
 	guint		len;
 
 	/* Ugly workaround to prevent race on startup when item is selected
@@ -242,7 +237,6 @@ enclosure_list_view_load (EnclosureListView *elv, itemPtr item)
 	
 	/* load list into tree view */
 	list = metadata_list_get_values (item->metadata, "enclosure");
-	list_str = list;
 	while (list) {
 		enclosurePtr enclosure = enclosure_from_string (list->data);
 		if (enclosure) {
@@ -287,8 +281,6 @@ enclosure_list_view_load (EnclosureListView *elv, itemPtr item)
 		list = g_slist_next (list);
 	}
 
-	/* Load the optional media player plugin */
-	liferea_media_player_load (LIFEREA_MEDIA_PLAYER(elv->media_player), list_str);
 
 	/* decide visibility of the list */
 	len = g_slist_length (elv->enclosures);

@@ -48,4 +48,12 @@ GtkWidget* liferea_media_player_new (void);
  */
 void liferea_media_player_load (LifereaMediaPlayer *self, GSList *enclosures);
 
+/**
+ * liferea_media_player_on_leaving_item:
+ *
+ * Indicates to all enbled LifereaMediaPlayerActivatable extensions that the user
+ * is navigating away from the item.
+ */
+void liferea_media_player_on_leaving_item (LifereaMediaPlayer *self);
+
 #endif

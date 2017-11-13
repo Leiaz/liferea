@@ -88,7 +88,6 @@ class MediaPlayerPlugin(GObject.Object, Liferea.MediaPlayerActivatable):
         uri = Liferea.enclosure_get_url(self.enclosures[self.pos])
         self.player.set_property("uri", uri)
         self.player.set_state(Gst.State.PLAYING)
-        Liferea.ItemView.select_enclosure(self.pos)
         self.updateButtons()
 
         GObject.timeout_add(1000, self.updateSlider)
@@ -195,9 +194,16 @@ class MediaPlayerPlugin(GObject.Object, Liferea.MediaPlayerActivatable):
                                     Gst.SeekFlags.KEY_UNIT,
                                     self.move_to_nanosecs)
 
+    def do_on_leaving_item (self):
+        if (self.player_widget and (self.playing == PlayState.STOP)):
+            Gtk.Widget.hide (self.player_widget)
 
     def do_load(self, enclosures):
-        self.enclosures = []
+        if (self.playing != PlayState.STOP):
+            self.enclosures = [self.enclosures[self.pos]]
+        else:
+            self.enclosures = []
+        self.pos = 0
 
         # Filter the enclosures we want
         for e in enclosures:
@@ -255,12 +261,10 @@ class MediaPlayerPlugin(GObject.Object, Liferea.MediaPlayerActivatable):
            self.set_label(0)
            Gtk.Box.pack_start(vbox, self.label, False, False, 0)
 
-           Gtk.Widget.show_all(vbox)
            self.player_widget = vbox
 
-        self.pos = 0
-        self.player.set_state(Gst.State.NULL)   # FIXME: Make this configurable?
-        self.on_finished(self.player)
+        Gtk.Widget.show_all(self.player_widget)
+        self.updateButtons ()
 
     #def do_activate(self):
         #print("=== MediaPlayer activate")

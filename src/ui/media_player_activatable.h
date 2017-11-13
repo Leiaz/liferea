@@ -42,6 +42,7 @@ struct _LifereaMediaPlayerActivatableInterface
 	void (*activate) (LifereaMediaPlayerActivatable * activatable);
 	void (*deactivate) (LifereaMediaPlayerActivatable * activatable);
 	void (*load) (LifereaMediaPlayerActivatable * activatable, GSList *enclosures);
+	void (*on_leaving_item) (LifereaMediaPlayerActivatable *activatable);
 };
 
 GType liferea_media_player_activatable_get_type (void) G_GNUC_CONST;
@@ -58,6 +59,14 @@ void liferea_media_player_activatable_deactivate (LifereaMediaPlayerActivatable 
  * enclosures into it.
  */
 void liferea_media_player_activatable_load (LifereaMediaPlayerActivatable *activatable, GSList *enclosures);
+
+/**
+ * liferea_media_player_activatable_on_leaving_item:
+ *
+ * This is called when the user navigates away from the item.
+ * If the plugin provides a widget, it should consider hidding it.
+ */
+void liferea_media_player_activatable_on_leaving_item (LifereaMediaPlayerActivatable *activatable);
 
 G_END_DECLS
 

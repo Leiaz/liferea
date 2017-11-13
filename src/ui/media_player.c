@@ -99,6 +99,15 @@ liferea_media_player_load_foreach (PeasExtensionSet *set,
 	liferea_media_player_activatable_load (LIFEREA_MEDIA_PLAYER_ACTIVATABLE (exten), user_data);
 }
 
+static void
+liferea_media_player_on_leaving_item_foreach (PeasExtensionSet *set,
+					      PeasPluginInfo *info,
+					      PeasExtension *exten,
+					      gpointer user_data)
+{
+	liferea_media_player_activatable_on_leaving_item (LIFEREA_MEDIA_PLAYER_ACTIVATABLE (exten));
+}
+
 void
 liferea_media_player_load (LifereaMediaPlayer *self, GSList *enclosures)
 {
@@ -111,4 +120,14 @@ liferea_media_player_load (LifereaMediaPlayer *self, GSList *enclosures)
 	self->enclosures = g_slist_copy_deep (enclosures, (GCopyFunc) g_strdup, NULL);
 	peas_extension_set_foreach (self->extensions,
 	                            liferea_media_player_load_foreach, self->enclosures);
+}
+
+void
+liferea_media_player_on_leaving_item (LifereaMediaPlayer *self)
+{
+	if (!self->extensions)
+		return;
+
+	peas_extension_set_foreach (self->extensions,
+	                            liferea_media_player_load_foreach, NULL);
 }

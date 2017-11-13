@@ -27,12 +27,14 @@
 #include "item_history.h"
 #include "itemlist.h"
 #include "itemview.h"
+#include "metadata.h"
 #include "node.h"
 #include "ui/ui_common.h"
 #include "ui/enclosure_list_view.h"
 #include "ui/liferea_shell.h"
 #include "ui/item_list_view.h"
 #include "ui/liferea_htmlview.h"
+#include "ui/media_player.h"
 
 /* The item view is the layer that switches item list presentations:
    a HTML single item or list and GtkTreeView list presentation. 
@@ -57,6 +59,7 @@ struct ItemViewPrivate {
 	guint		currentLayoutMode;	/*<< layout mode (3 pane, 2 pane, wide view) */
 								     
 	ItemListView	*itemListView;		/*<< widget instance used to present items in list mode */
+	GtkWidget 	*mediaPlayer;
 
 	EnclosureListView	*enclosureView;	/*<< Enclosure list widget */
 	LifereaHtmlView		*htmlview;	/*<< HTML rendering widget instance used to render single items and summaries mode */
@@ -91,6 +94,8 @@ itemview_finalize (GObject *object)
 		gtk_widget_destroy (GTK_WIDGET (priv->enclosureView));
 	if (priv->itemListView)
 		g_object_unref (priv->itemListView);
+	if (priv->mediaPlayer)
+		g_object_unref (priv->mediaPlayer);
 
 	G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -154,6 +159,7 @@ itemview_clear (void)
 		item_list_view_clear (itemview->priv->itemListView);
 	htmlview_clear ();
 	enclosure_list_view_hide (itemview->priv->enclosureView);
+	liferea_media_player_on_leaving_item (LIFEREA_MEDIA_PLAYER (itemview->priv->mediaPlayer));
 	itemview->priv->hasEnclosures = FALSE;
 	itemview->priv->needsHTMLViewUpdate = TRUE;
 	itemview->priv->browsing = FALSE;
@@ -231,10 +237,15 @@ itemview_select_item (itemPtr item)
 		item_list_view_select (ivp->itemListView, item);
 	htmlview_select_item (item);
 
-	if (item)
+	if (item) {
 		enclosure_list_view_load (ivp->enclosureView, item);
-	else
+		liferea_media_player_load (LIFEREA_MEDIA_PLAYER (ivp->mediaPlayer),
+			metadata_list_get_values (item->metadata, "enclosure"));
+	} else {
 		enclosure_list_view_hide (ivp->enclosureView);
+		liferea_media_player_load (LIFEREA_MEDIA_PLAYER (ivp->mediaPlayer), NULL);
+		liferea_media_player_on_leaving_item (LIFEREA_MEDIA_PLAYER (ivp->mediaPlayer));
+	}
 
 	if (item)
 		item_history_add (item->id);
@@ -489,6 +500,26 @@ itemview_set_layout (nodeViewType newMode)
 		                  GTK_WIDGET (ivp->enclosureView),
 				  NULL, GTK_POS_BOTTOM, 1,1);
 		gtk_widget_show_all (liferea_shell_lookup (encViewVBoxName));
+	}
+
+	/* Create media player if not already present */
+	if (!ivp->mediaPlayer) {
+		ivp->mediaPlayer = g_object_ref_sink (liferea_media_player_new ());
+	}
+
+	/* Remove media player from current container */
+	previous_parent = gtk_widget_get_parent (ivp->mediaPlayer);
+	if (previous_parent)
+		gtk_container_remove (GTK_CONTAINER (previous_parent), ivp->mediaPlayer);
+
+	/* Place in new position */
+	if (encViewVBoxName) {
+		gtk_grid_attach_next_to (GTK_GRID (liferea_shell_lookup (encViewVBoxName)), ivp->mediaPlayer, GTK_WIDGET (ivp->enclosureView), GTK_POS_BOTTOM, 1, 1);
+		gtk_widget_show (ivp->mediaPlayer);
+	} else {
+		/* We are in combined view */
+		gtk_grid_attach_next_to (GTK_GRID (liferea_shell_lookup ("combinedViewGrid")), ivp->mediaPlayer, NULL, GTK_POS_BOTTOM, 1, 1);
+		gtk_widget_show (ivp->mediaPlayer);
 	}
 }
 
